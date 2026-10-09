@@ -82,8 +82,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  update(time: number, delta: number): void {
-    // game loop
+  fixedTick(time: number, delta: number) {
     if (!this.room) {
       return;
     }
@@ -119,6 +118,22 @@ export class GameScene extends Phaser.Scene {
 
       entity.x = Phaser.Math.Linear(entity.x, serverX, 0.2);
       entity.y = Phaser.Math.Linear(entity.y, serverY, 0.2);
+    }
+  }
+
+  elapsedTime = 0;
+  fixedTimeStep = 1000 / 60;
+
+  update(time: number, delta: number): void {
+    // game loop
+    if (!this.currentPlayer) {
+      return;
+    }
+
+    this.elapsedTime += delta;
+    while (this.elapsedTime >= this.fixedTimeStep) {
+      this.elapsedTime -= this.fixedTimeStep;
+      this.fixedTick(time, this.fixedTimeStep);
     }
   }
 }

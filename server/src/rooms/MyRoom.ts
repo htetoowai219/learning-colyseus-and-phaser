@@ -4,29 +4,35 @@ import { MyRoomState, Player } from "./schema/MyRoomState.js";
 export class MyRoom extends Room<{ state: MyRoomState }> {
   maxClients = 4;
   state = new MyRoomState();
+  fixedTimeStep = 1000 / 60;
+
+  fixedTick(deltaTime: number) {
+    const velocity = 2;
+
+    this.state.players.forEach((player) => {
+      let input: any;
+
+      while ((input = player.inputQueue.shift())) {
+        if (input.left) {
+          player.x -= velocity;
+        } else if (input.right) {
+          player.x += velocity;
+        }
+
+        if (input.up) {
+          player.y -= velocity;
+        } else if (input.down) {
+          player.y += velocity;
+        }
+      }
+    });
+  }
 
   messages = {
     0: (client, payload) => {
       const player = this.state.players.get(client.sessionId);
-      const velocity = 2;
 
-      if (payload.left) {
-        player.x -= velocity;
-      } else if (payload.right) {
-        player.x += velocity;
-      }
-
-      if (payload.up) {
-        player.y -= velocity;
-      } else if (payload.down) {
-        player.y += velocity;
-      }
-    },
-    yourMessageType: (client: Client, message: any) => {
-      /**
-       * Handle "yourMessageType" message.
-       */
-      console.log(client.sessionId, "sent a message:", message);
+      player.inputQueue.push(payload);
     },
   };
 
@@ -34,6 +40,15 @@ export class MyRoom extends Room<{ state: MyRoomState }> {
     /**
      * Called when a new room is created.
      */
+    let elapsedTime = 0;
+    this.setTimestep((deltaTime) => {
+      elapsedTime += deltaTime;
+
+      while (elapsedTime >= this.fixedTimeStep) {
+        elapsedTime -= this.fixedTimeStep;
+        this.fixedTick(this.fixedTimeStep);
+      }
+    });
   }
 
   onJoin(client: Client, options: any) {

@@ -776,8 +776,7 @@ class GameScene extends (0, _phaserDefault.default).Scene {
             }
         });
     }
-    update(time, delta) {
-        // game loop
+    fixedTick(time, delta) {
         if (!this.room) return;
         const velocity = 2;
         this.inputPayload.left = this.cursorKeys.left.isDown;
@@ -796,6 +795,17 @@ class GameScene extends (0, _phaserDefault.default).Scene {
             const { serverX, serverY } = entity.data.values;
             entity.x = (0, _phaserDefault.default).Math.Linear(entity.x, serverX, 0.2);
             entity.y = (0, _phaserDefault.default).Math.Linear(entity.y, serverY, 0.2);
+        }
+    }
+    elapsedTime = 0;
+    fixedTimeStep = 1000 / 60;
+    update(time, delta) {
+        // game loop
+        if (!this.currentPlayer) return;
+        this.elapsedTime += delta;
+        while(this.elapsedTime >= this.fixedTimeStep){
+            this.elapsedTime -= this.fixedTimeStep;
+            this.fixedTick(time, this.fixedTimeStep);
         }
     }
 }
