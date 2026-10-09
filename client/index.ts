@@ -1,10 +1,12 @@
 import Phaser from "phaser";
 import { Client, Room, Callbacks } from "@colyseus/sdk";
 import { Player, SessionId } from "./types/types";
+import { VirtualJoystick } from "./components/VirtualJoystick";
 
 // custom scene class
 export class GameScene extends Phaser.Scene {
   room: Room;
+  joystick?: VirtualJoystick;
 
   playerEntities: { [sessionId: string]: any } = {};
 
@@ -29,7 +31,8 @@ export class GameScene extends Phaser.Scene {
     this.cursorKeys = this.input.keyboard.createCursorKeys();
   }
 
-  client = new Client("http://localhost:2567");
+  // client = new Client("http://localhost:2567");
+  client = new Client(`http://${window.location.hostname}:2567`);
 
   async create() {
     // create scene
@@ -41,6 +44,10 @@ export class GameScene extends Phaser.Scene {
     } catch (e) {
       console.error(e);
     }
+
+    //if (this.sys.game.device.input.touch) {
+    this.joystick = new VirtualJoystick(this, 110, this.scale.height - 110, 80);
+    //}
 
     const callbacks = Callbacks.get(this.room);
     callbacks.onAdd("players", (player: Player, sessionId: SessionId) => {
@@ -89,10 +96,11 @@ export class GameScene extends Phaser.Scene {
 
     const velocity = 2;
 
-    this.inputPayload.left = this.cursorKeys.left.isDown;
-    this.inputPayload.right = this.cursorKeys.right.isDown;
-    this.inputPayload.up = this.cursorKeys.up.isDown;
-    this.inputPayload.down = this.cursorKeys.down.isDown;
+    this.inputPayload.left = this.cursorKeys.left.isDown || this.joystick?.left;
+    this.inputPayload.right =
+      this.cursorKeys.right.isDown || this.joystick?.right;
+    this.inputPayload.up = this.cursorKeys.up.isDown || this.joystick?.up;
+    this.inputPayload.down = this.cursorKeys.down.isDown || this.joystick?.down;
     this.room.send(0, this.inputPayload);
 
     if (this.inputPayload.left) {
@@ -148,6 +156,10 @@ const config: Phaser.Types.Core.GameConfig = {
   physics: { default: "arcade" },
   pixelArt: true,
   scene: [GameScene],
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
 };
 
 // instantiate the game
