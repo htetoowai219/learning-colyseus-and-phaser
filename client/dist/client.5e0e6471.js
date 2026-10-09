@@ -731,6 +731,8 @@ class GameScene extends (0, _phaserDefault.default).Scene {
         down: false
     };
     cursorKeys;
+    currentPlayer;
+    remoteRef;
     preload() {
         // preload scene
         this.load.image("ship_0001", "https://cdn.jsdelivr.net/gh/colyseus/tutorial-phaser@master/client/dist/assets/ship_0001.png");
@@ -752,7 +754,15 @@ class GameScene extends (0, _phaserDefault.default).Scene {
             console.log("A player has joined! Their unique session id is ", sessionId);
             const entity = this.physics.add.image(player.x, player.y, "ship_0001");
             this.playerEntities[sessionId] = entity;
-            callbacks.onChange(player, ()=>{
+            if (sessionId === this.room.sessionId) {
+                this.currentPlayer = entity;
+                this.remoteRef = this.add.rectangle(0, 0, entity.width, entity.height);
+                this.remoteRef.setStrokeStyle(1, 0xff0000);
+                callbacks.onChange(player, ()=>{
+                    this.remoteRef.x = player.x;
+                    this.remoteRef.y = player.y;
+                });
+            } else callbacks.onChange(player, ()=>{
                 entity.setData("serverX", player.x);
                 entity.setData("serverY", player.y);
             });
@@ -769,12 +779,19 @@ class GameScene extends (0, _phaserDefault.default).Scene {
     update(time, delta) {
         // game loop
         if (!this.room) return;
+        const velocity = 2;
         this.inputPayload.left = this.cursorKeys.left.isDown;
         this.inputPayload.right = this.cursorKeys.right.isDown;
         this.inputPayload.up = this.cursorKeys.up.isDown;
         this.inputPayload.down = this.cursorKeys.down.isDown;
         this.room.send(0, this.inputPayload);
+        if (this.inputPayload.left) this.currentPlayer.x -= velocity;
+        else if (this.inputPayload.right) this.currentPlayer.x += velocity;
+        if (this.inputPayload.up) this.currentPlayer.y -= velocity;
+        else if (this.inputPayload.down) this.currentPlayer.y += velocity;
         for(let sessionId in this.playerEntities){
+            // skip linear interpolation for local player
+            if (sessionId === this.room.sessionId) continue;
             const entity = this.playerEntities[sessionId];
             const { serverX, serverY } = entity.data.values;
             entity.x = (0, _phaserDefault.default).Math.Linear(entity.x, serverX, 0.2);
