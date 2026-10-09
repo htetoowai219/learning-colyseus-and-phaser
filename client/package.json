@@ -16,6 +16,7 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "@colyseus/schema": "^5.0.8",
     "@colyseus/sdk": "^0.18.5",
     "phaser": "^4.2.1"
   }

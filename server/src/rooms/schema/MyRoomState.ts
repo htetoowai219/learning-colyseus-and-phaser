@@ -4,10 +4,6 @@ export const Player = schema(
   {
     x: t.number(),
     y: t.number(),
-    inputQueue: t
-      .ref(Array)
-      .noSync()
-      .default(() => []),
   },
   "Player",
 );

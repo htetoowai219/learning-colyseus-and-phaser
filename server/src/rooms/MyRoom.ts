@@ -1,54 +1,38 @@
 import { Room, Client, CloseCode } from "colyseus";
 import { MyRoomState, Player } from "./schema/MyRoomState.js";
+import { MoveInput } from "../shared/MoveInput.js";
+import { applyInput } from "../shared/applyInput.js";
 
-export class MyRoom extends Room<{ state: MyRoomState }> {
+export class MyRoom extends Room<{ state: MyRoomState; input: MoveInput }> {
   maxClients = 4;
   state = new MyRoomState();
-  fixedTimeStep = 1000 / 60;
 
-  fixedTick(deltaTime: number) {
-    const velocity = 2;
-
-    this.state.players.forEach((player) => {
-      let input: any;
-
-      while ((input = player.inputQueue.shift())) {
-        if (input.left) {
-          player.x -= velocity;
-        } else if (input.right) {
-          player.x += velocity;
-        }
-
-        if (input.up) {
-          player.y -= velocity;
-        } else if (input.down) {
-          player.y += velocity;
-        }
-      }
-    });
-  }
-
-  messages = {
-    0: (client, payload) => {
-      const player = this.state.players.get(client.sessionId);
-
-      player.inputQueue.push(payload);
-    },
-  };
+  // Per-client input schema + buffered inbound frames. `defineInput` also powers
+  // the client's `room.clock`/`room.input()` and advertises the fixed tick rate.
+  inputs = this.defineInput(MoveInput, { bufferMaxSize: 64 });
 
   onCreate(options: any) {
     /**
      * Called when a new room is created.
      */
-    let elapsedTime = 0;
-    this.setTimestep((deltaTime) => {
-      elapsedTime += deltaTime;
+    // Broadcast state at 30 Hz instead of the 20 Hz default. The input ack
+    // rides the patch, so this shrinks ack quantization (~50ms -> ~33ms) and
+    // lets remote interpolation use a smaller delay. Cost: ~50% more outbound
+    // bandwidth (trivial at our 4-player cap). Sim stays at 60 Hz below.
+    this.patchRate = 1000 / 30;
 
-      while (elapsedTime >= this.fixedTimeStep) {
-        elapsedTime -= this.fixedTimeStep;
-        this.fixedTick(this.fixedTimeStep);
-      }
-    });
+    // Fixed 60 Hz simulation. `ctx.dt` is the exact same dt the client predicts
+    // with, so server and client integrate applyInput() identically.
+    this.setFixedTimestep((ctx) => {
+      this.state.players.forEach((player, sessionId) => {
+        // Exactly one input per tick: the ack (`consumedCount`) then matches the
+        // inputs actually simulated; the client reconciles against reproducible state.
+        const input = this.inputs.get(sessionId).next();
+        if (!input) return;
+
+        applyInput(player, input, ctx.dt);
+      });
+    }, 60);
   }
 
   onJoin(client: Client, options: any) {

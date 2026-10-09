@@ -60,6 +60,11 @@ const server = defineServer({
     }
   },
 });
-server.simulateLatency(200);
+// Optional artificial latency for testing. OFF by default so local/LAN and
+// phone tests reflect the real network. Enable with e.g. COLYSEUS_LATENCY=200.
+const latency = Number(process.env.COLYSEUS_LATENCY ?? 0);
+if (latency > 0) {
+  server.simulateLatency(latency);
+}
 
 export default server;
