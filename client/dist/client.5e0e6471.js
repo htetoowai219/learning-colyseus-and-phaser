@@ -753,8 +753,8 @@ class GameScene extends (0, _phaserDefault.default).Scene {
             const entity = this.physics.add.image(player.x, player.y, "ship_0001");
             this.playerEntities[sessionId] = entity;
             callbacks.onChange(player, ()=>{
-                entity.x = player.x;
-                entity.y = player.y;
+                entity.setData("serverX", player.x);
+                entity.setData("serverY", player.y);
             });
         });
         callbacks.onRemove("players", (player, sessionId)=>{
@@ -774,6 +774,12 @@ class GameScene extends (0, _phaserDefault.default).Scene {
         this.inputPayload.up = this.cursorKeys.up.isDown;
         this.inputPayload.down = this.cursorKeys.down.isDown;
         this.room.send(0, this.inputPayload);
+        for(let sessionId in this.playerEntities){
+            const entity = this.playerEntities[sessionId];
+            const { serverX, serverY } = entity.data.values;
+            entity.x = (0, _phaserDefault.default).Math.Linear(entity.x, serverX, 0.2);
+            entity.y = (0, _phaserDefault.default).Math.Linear(entity.y, serverY, 0.2);
+        }
     }
 }
 // game config
