@@ -13,7 +13,6 @@ import {
 import { MyRoom } from "./rooms/MyRoom.js";
 
 const server = defineServer({
-
   /**
    * Define your room handlers:
    */
@@ -39,7 +38,6 @@ const server = defineServer({
    * Read more: https://expressjs.com/en/starter/basic-routing.html
    */
   express: (app) => {
-
     app.get("/hi", (req, res) => {
       res.send("It's time to kick ass and chew bubblegum!");
     });
@@ -60,8 +58,8 @@ const server = defineServer({
     if (process.env.NODE_ENV !== "production") {
       app.use("/", playground());
     }
-  }
+  },
 });
+server.simulateLatency(200);
 
 export default server;
-
